@@ -2,15 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path"
+	"text/template"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	flag "github.com/spf13/pflag"
-	"log"
-	"os"
-	"path"
-	"text/template"
 )
 
 const credentialsTemplate = `[default]
@@ -33,30 +34,28 @@ func init() {
 
 func main() {
 	flag.Parse()
-
 	dirname, err := os.UserHomeDir()
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	log.Println("Program has started...")
 	credentialsPath := path.Join(dirname, ".aws", "credentials")
 	if _, err := os.Stat(credentialsPath); !os.IsNotExist(err) {
 		if err := os.Remove(credentialsPath); err != nil {
-			fmt.Println(err)
-			return
+			log.Fatalln(err)
 		}
 	}
-
+	log.Printf("AWS creadentials file found %s\n : OK", credentialsPath)
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
 	resp, err := getToken(sess, arn, mfa, duration)
 	if err != nil {
-		fmt.Printf("error %v", err.Error())
+		fmt.Printf("error trying to get token %v", err.Error())
 		os.Exit(1)
 	}
-
+	log.Println("get token: OK")
 	t := template.Must(template.New("").Parse(credentialsTemplate))
 
 	fd, err := os.OpenFile(credentialsPath, os.O_CREATE|os.O_WRONLY, 644)
